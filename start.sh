@@ -37,23 +37,32 @@ sudo tccutil reset All com.philandro.anydesk 2>/dev/null
 
 #Start AnyDesk service
 echo "Starting AnyDesk..."
+/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --service &
+sleep 3
 open -a AnyDesk 2>/dev/null
 
-#Wait for AnyDesk to fully start
-sleep 10
+#Wait for AnyDesk to fully start and initialize
+echo "Waiting for AnyDesk service to initialize..."
+sleep 15
 
 #Get AnyDesk ID
 echo "Getting AnyDesk ID..."
-ANYDESK_ID=$(echo 'get' | /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --get-id 2>/dev/null)
+ANYDESK_ID=$(/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --get-id 2>/dev/null | grep -o '[0-9]*' | head -n1)
 
 if [ -z "$ANYDESK_ID" ]; then
     echo "Trying alternative method to get AnyDesk ID..."
     sleep 5
-    ANYDESK_ID=$(defaults read com.philandro.anydesk ad.anynet.id 2>/dev/null)
+    ANYDESK_ID=$(defaults read com.philandro.anydesk ad.anynet.id 2>/dev/null | grep -o '[0-9]*')
+fi
+
+if [ -z "$ANYDESK_ID" ]; then
+    echo "Trying to read from AnyDesk files..."
+    sleep 5
+    ANYDESK_ID=$(cat ~/Library/Application\ Support/AnyDesk/service.conf 2>/dev/null | grep -o 'ad.anynet.id=[0-9]*' | cut -d'=' -f2)
 fi
 
 ANYDESK_SUCCESS=false
-if [ ! -z "$ANYDESK_ID" ]; then
+if [ ! -z "$ANYDESK_ID" ] && [ "$ANYDESK_ID" != "SERVICE_NOT_RUNNING" ]; then
     echo "========================================="
     echo "✓ AnyDesk ID: $ANYDESK_ID"
     echo "Password: P@ssw0rd!"
@@ -61,15 +70,15 @@ if [ ! -z "$ANYDESK_ID" ]; then
     
     #Configure unattended access with password
     echo "Configuring unattended access..."
-    echo "P@ssw0rd!" | /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-password
+    echo "P@ssw0rd!" | /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-password 2>/dev/null
     
     #Enable unattended access (disable acceptance requirement)
-    /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-setting ad.security.interactive_access 1
-    /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-setting ad.security.unattended_access_allow 1
+    /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-setting ad.security.interactive_access 1 2>/dev/null
+    /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-setting ad.security.unattended_access_allow 1 2>/dev/null
     
     ANYDESK_SUCCESS=true
 else
-    echo "⚠ Could not retrieve AnyDesk ID. Setting up VNC/RDP as fallback..."
+    echo "⚠ AnyDesk service not running properly. Setting up VNC/RDP as fallback..."
 fi
 
 #Setup VNC/RDP as fallback
