@@ -57,8 +57,13 @@ else
     echo "Password: P@ssw0rd!"
 fi
 
-#Set unattended access password (optional)
+#Configure unattended access with password
+echo "Configuring unattended access..."
 echo "P@ssw0rd!" | /Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-password
+
+#Enable unattended access (disable acceptance requirement)
+/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-setting ad.security.interactive_access 1
+/Applications/AnyDesk.app/Contents/MacOS/AnyDesk --set-setting ad.security.unattended_access_allow 1
 
 #Keep script running to display ID
 echo ""
